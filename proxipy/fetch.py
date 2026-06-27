@@ -1,12 +1,8 @@
 """
-Refresh the free-proxy-list mirror from the ProxyScrape v4 public API.
+Python wrapper around the ProxyScrape v4 public API.
 
 Writes:
-  proxies/all/data.{txt,json,csv}
-  proxies/protocols/{http,https,socks4,socks5}/data.{txt,json,csv}
-  proxies/countries/{ISO}/data.{txt,json,csv}                 (ISO-3166 alpha-2, lowercased)
-  proxies/countries/{ISO}/{protocol}/data.{txt,json,csv}      (only when non-empty)
-  proxies/stats.json
+  <out_dir>/proxies.{txt,json}
 
 The "all" shard is fetched in one call (with a generous limit). Protocol and
 country shards are derived from that response by filtering — keeping one API
@@ -19,28 +15,26 @@ Schema notes (upstream):
   - uptime is reported as a 0–100 percentage by ProxyScrape; we round to 2dp
   - times_alive / times_dead expose the underlying check history
 
-Published columns (CSV / JSON):
+Published columns (JSON):
   protocol, ip, port, country, country_code, city, anonymity, ssl,
   uptime_percent, asn, isp, latency_ms, last_checked
 
-TXT format: protocol://ip:port  (one per line)
+TXT format: <protocol>://<ip>:<port>  (one per line)
 
 Exits non-zero on any HTTP/parse failure so the workflow surfaces it.
 """
 from __future__ import annotations
 from dataclasses import dataclass
 
-import io
 import json
 import os
 import sys
 import argparse
-import shutil
+import datetime
 import time
 import urllib.error
 import urllib.request
 import urllib.parse
-from collections import defaultdict
 from typing import Any, Iterable
 
 # The API caps each call at 2000 proxies regardless of the requested limit,
@@ -79,6 +73,12 @@ class ProxyQuery:
 
 REQUEST_DELAY_S = 1.5  # polite delay between pages to avoid upstream 5xx
 MAX_RETRIES = 4
+
+"""
+Default dir is used when an out directory is not provided
+If you intend to include this script in automations you should change the Format
+"""
+DEFAULT_DIR = f"./{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}_proxies/"
 
 def fetch_page(query: ProxyQuery) -> dict[str, Any]:
     skip = query.skip
@@ -220,9 +220,9 @@ def render_json(rows: list[dict[str, Any]]) -> str:
 
 def write_shard(dirpath: str, rows: list[dict[str, Any]]) -> None:
     os.makedirs(dirpath, exist_ok=True)
-    with open(os.path.join(dirpath, "data.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(dirpath, "proxies.txt"), "w", encoding="utf-8") as f:
         f.write(render_txt(rows))
-    with open(os.path.join(dirpath, "data.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(dirpath, "proxies.json"), "w", encoding="utf-8") as f:
         f.write(render_json(rows))
 
 
@@ -294,9 +294,9 @@ def resolve_api_params(selected: set[str]) -> tuple[str, str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-            prog="proxypy",
-            description="A simple script that fetches proxies from a public and free proxy list",
-            )
+        prog="proxypy-fetch",
+        description="Fetch proxies from a public and free proxy list",
+    )
 
     parser.add_argument(
         "-p",
@@ -329,9 +329,9 @@ def main() -> None:
         "-d",
         "--directory",
         type=str,
-        default="./",
-        metavar="str",
-        help="Output dir. If the dir already has the proxy file they will be replaced. (default: ./)",
+        default=DEFAULT_DIR,
+        metavar="DIR",
+        help="Output dir. If the dir already has the proxy file they will be replaced. (default: TIME()_proxies)",
     )
 
     args = parser.parse_args()
@@ -376,8 +376,17 @@ def main() -> None:
             file=sys.stderr,
         )
     rows = deduped
+
+    """
+    TODO: Implement some sorting logic
+        sort by uptime,
+        sort by protocol,
+        sort by country,
+    """
+
     print(f"[update] Final unique proxy count: {len(rows)}", file=sys.stderr)
-    write_shard("./test.out", rows)
+    write_shard(args.directory, rows)
+    print(f"[update] Out dir: {args.directory}", file=sys.stderr)
 
 
 if __name__ == "__main__":

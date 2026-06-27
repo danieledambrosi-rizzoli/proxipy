@@ -61,7 +61,7 @@ python proxipy.py -p http,https,socks4
 
 ## Output
 
-For every run, the script writes `data.txt` and `data.json` into the chosen output directory. The text file looks like:
+For every run, the script writes `proxies.txt` and `proxies.json` into the chosen output directory. The text file looks like:
 
 ```text
 http://123.45.67.89:8080
