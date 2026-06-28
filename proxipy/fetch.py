@@ -382,6 +382,7 @@ def main() -> None:
         sort by uptime,
         sort by protocol,
         sort by country,
+        sort by last_checked,
     """
 
     print(f"[update] Final unique proxy count: {len(rows)}", file=sys.stderr)
