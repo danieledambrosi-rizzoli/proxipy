@@ -386,6 +386,13 @@ def main() -> None:
     """
 
     print(f"[update] Final unique proxy count: {len(rows)}", file=sys.stderr)
+    """
+    TODO: Change the writing logic
+        write in stdout
+        write in text_file
+        write in json_file
+        write in out_dir(text + json)
+    """
     write_shard(args.directory, rows)
     print(f"[update] Out dir: {args.directory}", file=sys.stderr)
 
