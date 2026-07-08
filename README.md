@@ -1,3 +1,4 @@
+This is outdated, i will redo it.
 # Proxypy
 
 A small Python tool that fetches free proxies from the public [ProxyScrape](https://github.com/ProxyScrape/free-proxy-list) API and saves them to disk in `.txt` and `.json` formats.
